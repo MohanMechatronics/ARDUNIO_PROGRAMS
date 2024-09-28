@@ -1,0 +1,25 @@
+#######################################
+# Syntax Coloring Map
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+ThingESP32   KEYWORD1
+ThingESP8266   KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+SetWiFi KEYWORD2
+initDevice KEYWORD2
+setCallback KEYWORD2
+Handle KEYWORD2
+sendMsg KEYWORD2
+
+######################################
+# Constants (LITERAL1)
+#######################################
+HandleResponse    LITERAL1
