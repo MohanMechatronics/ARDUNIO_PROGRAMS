@@ -131,7 +131,6 @@ void  FORWARD(){
   ledcWrite(1, 0);
   ledcWrite(2, 255);
   ledcWrite(3, 0);
-  mood = 3;
 }
 void BACKWARD(){
   // BACKWARD
@@ -139,7 +138,6 @@ void BACKWARD(){
   ledcWrite(1, 255);
   ledcWrite(2, 0);
   ledcWrite(3, 255);
-  mood = 5;
 }
 void LEFT(){
   // LEFT
@@ -147,7 +145,6 @@ void LEFT(){
   ledcWrite(1, 255);
   ledcWrite(2, 255);
   ledcWrite(3, 0);
-  mood = 4;
 }
 void RIGHT(){
   // RIGHT
@@ -155,7 +152,6 @@ void RIGHT(){
   ledcWrite(1, 0);
   ledcWrite(2, 0);
   ledcWrite(3, 255);
-  mood = 2;
 }
 void STOP(){
   // STOP
@@ -163,7 +159,6 @@ void STOP(){
   ledcWrite(1, 0);
   ledcWrite(2, 0);
   ledcWrite(3, 0);
-  mood = 1;
 }
 
 void loop() {

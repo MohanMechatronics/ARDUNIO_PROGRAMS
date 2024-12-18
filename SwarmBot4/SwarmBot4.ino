@@ -24,6 +24,29 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &I2Cbus, OLED_RESET);
 int xp=16;
 int mood=5;
 
+unsigned long previousMillis5 = 0;       // Timer for stopping period for case 5 (10 seconds)
+unsigned long actionMillis5 = 0;         // Timer for action in case 5 (2 seconds)
+unsigned long previousMillis6 = 0;       // Timer for stopping period for case 6 (10 seconds)
+unsigned long actionMillis6 = 0;         // Timer for action in case 6 (2 seconds)
+
+unsigned long previousMillis11 = 0;       
+unsigned long actionMillis11 = 0;        
+unsigned long previousMillis12 = 0;       
+unsigned long actionMillis12 = 0;  
+
+const long stopInterval = 10000;         // 10 seconds stop time
+const long forwardDuration = 1000;          // 2 seconds for forward action
+
+bool isMoving5 = false;                  // Flag to track if robot is moving for case 5
+bool isStopping5 = false;                // Flag to track stop state for case 5
+bool isMoving6 = false;                  // Flag to track if robot is moving for case 6
+bool isStopping6 = false;
+
+bool isMoving11 = false;                  
+bool isStopping11 = false;
+bool isMoving12 = false;                  
+bool isStopping12 = false;
+
 // Init ESP Now with fallback
 void InitESPNow() {
   WiFi.disconnect();
@@ -103,6 +126,9 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   Serial.print("Last Packet Recv from: "); Serial.println(macStr);
   Serial.print("Last Packet Recv Data: "); Serial.println(*data);
   Serial.println("");
+
+  unsigned long currentMillis = millis(); // Track the current time
+
   switch(*data)
   {
     case 1: //FORWARD
@@ -116,6 +142,84 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
       break;
     case 4: //LEFT
       LEFT();                  
+      break;
+    case 5:
+    if (!isMoving5 && !isStopping5) {
+        BACKWARD();                    // Start moving forward for 2 seconds
+        isMoving5 = true;             // Set flag to indicate the robot is moving
+        actionMillis5 = currentMillis; // Record the time when action started
+      }
+
+      // Check if the robot has been moving for 2 seconds
+      if (isMoving5 && (currentMillis - actionMillis5 >= forwardDuration)) {
+        STOP();                       // Stop after 2 seconds of movement
+        isMoving5 = false;            // Reset the moving flag
+        isStopping5 = true;           // Set flag to indicate stop period starts
+        previousMillis5 = currentMillis; // Record the time when stop period starts
+      }
+
+      // Check if the stop period of 10 seconds has passed
+      if (isStopping5 && (currentMillis - previousMillis5 >= stopInterval)) {
+        isStopping5 = false;          // Reset the stop flag after 10 seconds
+      }
+      break;
+
+    case 6: // Case 6: Left for 2 seconds, stop for 100 seconds
+      if (!isMoving6 && !isStopping6) {
+        FORWARD();                       // Start moving FORWARD() for 2 seconds
+        isMoving6 = true;             // Set flag to indicate the robot is moving
+        actionMillis6 = currentMillis; // Record the time when action started
+      }
+
+      // Check if the robot has been moving for 2 seconds
+      if (isMoving6 && (currentMillis - actionMillis6 >= forwardDuration)) {
+        STOP();                       // Stop after 2 seconds of movement
+        isMoving6 = false;            // Reset the moving flag
+        isStopping6 = true;           // Set flag to indicate stop period starts
+        previousMillis6 = currentMillis; // Record the time when stop period starts
+      }
+
+      // Check if the stop period of 10 seconds has passed
+      if (isStopping6 && (currentMillis - previousMillis6 >= stopInterval)) {
+        isStopping6 = false;          // Reset the stop flag after 10 seconds
+      }
+      break;
+    case 11:
+    if (!isMoving11 && !isStopping11) {
+        BACKWARD();                    
+        isMoving11 = true;             
+        actionMillis11 = currentMillis; 
+      }
+
+      if (isMoving11 && (currentMillis - actionMillis11 >= forwardDuration)) {
+        STOP();                       
+        isMoving11 = false;           
+        isStopping11 = true;           
+        previousMillis11 = currentMillis; 
+      }
+
+      if (isStopping11 && (currentMillis - previousMillis11 >= stopInterval)) {
+        isStopping11 = false;
+      }
+      break;
+
+    case 12:
+      if (!isMoving12 && !isStopping12) {
+        FORWARD();                  
+        isMoving12 = true;       
+        actionMillis12 = currentMillis; 
+      }
+
+      if (isMoving12 && (currentMillis - actionMillis12 >= forwardDuration)) {
+        STOP();
+        isMoving12 = false;    
+        isStopping12 = true;        
+        previousMillis12 = currentMillis; 
+      }
+
+      if (isStopping12 && (currentMillis - previousMillis12 >= stopInterval)) {
+        isStopping12 = false;
+      }
       break;
     case 0:
       STOP();                  
@@ -131,7 +235,6 @@ void  FORWARD(){
   ledcWrite(1, 0);
   ledcWrite(2, 255);
   ledcWrite(3, 0);
-  mood = 3;
 }
 void BACKWARD(){
   // BACKWARD
@@ -139,7 +242,6 @@ void BACKWARD(){
   ledcWrite(1, 255);
   ledcWrite(2, 0);
   ledcWrite(3, 255);
-  mood = 5;
 }
 void LEFT(){
   // LEFT
@@ -147,7 +249,6 @@ void LEFT(){
   ledcWrite(1, 255);
   ledcWrite(2, 255);
   ledcWrite(3, 0);
-  mood = 4;
 }
 void RIGHT(){
   // RIGHT
@@ -155,7 +256,6 @@ void RIGHT(){
   ledcWrite(1, 0);
   ledcWrite(2, 0);
   ledcWrite(3, 255);
-  mood = 2;
 }
 void STOP(){
   // STOP
@@ -163,7 +263,6 @@ void STOP(){
   ledcWrite(1, 0);
   ledcWrite(2, 0);
   ledcWrite(3, 0);
-  mood = 1;
 }
 
 void loop() {

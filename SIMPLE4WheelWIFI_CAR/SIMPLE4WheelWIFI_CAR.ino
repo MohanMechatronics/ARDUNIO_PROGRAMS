@@ -115,7 +115,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
     </style>
   </head>
   <body class="noselect" align="center">
-    <h2 style="color: rgb(255, 255, 255); text-align: center">GENERAL_WROVER</h2>
+    <h2 style="color: rgb(255, 255, 255); text-align: center">GENERAL</h2>
     <h2 style="color: rgb(255, 255, 255); text-align: center">
       MECHATRONICS
     </h2>

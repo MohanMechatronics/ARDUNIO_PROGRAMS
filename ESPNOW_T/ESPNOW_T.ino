@@ -3,11 +3,12 @@
 
 // Global copy of slave
 esp_now_peer_info_t slave;
+
 #define CHANNEL 0
 #define PRINTSCANRESULTS 0
 #define DELETEBEFOREPAIR 0
 
-int mac[6] = {0xA8, 0x42, 0xE3, 0xAB, 0xB6, 0x7D}; //A8:42:E3:AB:B6:7D
+int mac[6] = {0x08, 0xD1, 0xF9, 0x35, 0x47, 0x09}; //A8:42:E3:AB:B6:7D
 
 // Init ESP Now with fallback
 void InitESPNow() {

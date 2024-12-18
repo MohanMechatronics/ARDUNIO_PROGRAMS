@@ -1,4 +1,4 @@
-const int BUZZER_PIN = 12;  // Buzzer signal pin
+const int BUZZER_PIN = 7;  // Buzzer signal pin
 const int LEDC_CHANNEL = 0;  // LEDC channel for the buzzer
 const int LEDC_RESOLUTION = 8;  // LEDC resolution (bit depth)
 const int LEDC_FREQUENCY = 2000;  // LEDC PWM frequency

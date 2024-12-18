@@ -22,10 +22,20 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &I2Cbus, OLED_RESET);
 
 #include "eyes.h"
 int xp = 16;
-int mood = 1;
+int mood = 1; 
 
+unsigned long previousMillis7 = 0;       
+unsigned long actionMillis7 = 0;        
+unsigned long previousMillis8 = 0;       
+unsigned long actionMillis8 = 0;
 
-void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len); // Corrected function signature
+const long stopInterval = 10000;         // 10 seconds stop time
+const long forwardSS = 2000;
+
+bool isMoving7 = false;                  
+bool isStopping7 = false;
+bool isMoving8 = false;                  
+bool isStopping8 = false;
 
 void InitESPNow() {
   WiFi.disconnect();
@@ -78,6 +88,7 @@ void setup() {
   Serial.print("AP MAC: "); Serial.println(WiFi.softAPmacAddress());
   InitESPNow();
   esp_now_register_recv_cb(OnDataRecv);
+
 }
 
 void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len) { // Corrected function signature
@@ -87,6 +98,9 @@ void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len) { // Correct
   Serial.print("Last Packet Recv from: "); Serial.println(macStr);
   Serial.print("Last Packet Recv Data: "); Serial.println(*data);
   Serial.println("");
+
+  unsigned long currentMillis = millis(); // Track the current time
+  
   switch (*data) {
     case 1: //FORWARD
       FORWARD();                  
@@ -99,6 +113,43 @@ void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len) { // Correct
       break;
     case 4: //RIGHT 
       RIGHT();                
+      break;
+    case 7:
+    if (!isMoving7 && !isStopping7) {
+        BACKWARD();                    
+        isMoving7 = true;             
+        actionMillis7 = currentMillis; 
+      }
+
+      if (isMoving7 && (currentMillis - actionMillis7 >= forwardSS)) {
+        STOP();                       
+        isMoving7 = false;           
+        isStopping7 = true;           
+        previousMillis7 = currentMillis; 
+      }
+
+      if (isStopping7 && (currentMillis - previousMillis7 >= stopInterval)) {
+        isStopping7 = false;
+      }
+      break;
+
+    case 8:
+      if (!isMoving8 && !isStopping8) {
+        FORWARD();                  
+        isMoving8 = true;       
+        actionMillis8 = currentMillis; 
+      }
+
+      if (isMoving8 && (currentMillis - actionMillis8 >= forwardSS)) {
+        STOP();
+        isMoving8 = false;    
+        isStopping8 = true;        
+        previousMillis8 = currentMillis; 
+      }
+
+      if (isStopping8 && (currentMillis - previousMillis8 >= stopInterval)) {
+        isStopping8 = false;
+      }
       break;
     case 0:
       STOP();                  
@@ -146,6 +197,8 @@ void STOP(){
 
 void loop() {
   // Chill
+  unsigned long currentMillis = millis();
+
   int n;
   static int xd=0;
   static int espera=0;

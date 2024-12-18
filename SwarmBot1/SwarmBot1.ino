@@ -24,6 +24,18 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &I2Cbus, OLED_RESET);
 int xp = 16;
 int mood = 1;
 
+unsigned long previousMillis7 = 0, actionMillis7 = 0;
+unsigned long previousMillis8 = 0, actionMillis8 = 0;
+unsigned long previousMillis9 = 0, actionMillis9 = 0;
+unsigned long previousMillis10 = 0, actionMillis10 = 0;
+
+const long stopInterval = 10000;
+const long forwardSS = 2000;
+
+bool isMoving7 = false, isStopping7 = false;
+bool isMoving8 = false, isStopping8 = false;
+bool isMoving9 = false, isStopping9 = false;
+bool isMoving10 = false, isStopping10 = false;
 
 void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len); // Corrected function signature
 
@@ -87,6 +99,9 @@ void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len) { // Correct
   Serial.print("Last Packet Recv from: "); Serial.println(macStr);
   Serial.print("Last Packet Recv Data: "); Serial.println(*data);
   Serial.println("");
+
+  unsigned long currentMillis = millis(); // Track the current time
+
   switch (*data) {
     case 1: //FORWARD
       FORWARD();                  
@@ -99,6 +114,112 @@ void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len) { // Correct
       break;
     case 4: //LEFT
       LEFT();              
+      break;
+    case 7:
+    if (!isMoving7 && !isStopping7) {
+        BACKWARD();                    
+        isMoving7 = true;             
+        actionMillis7 = currentMillis; 
+      }
+
+      if (isMoving7 && (currentMillis - actionMillis7 >= forwardSS)) {
+        STOP();                       
+        isMoving7 = false;           
+        isStopping7 = true;           
+        previousMillis7 = currentMillis; 
+      }
+
+      if (isStopping7 && (currentMillis - previousMillis7 >= stopInterval)) {
+        isStopping7 = false;
+      }
+      break;
+
+    case 8:
+      if (!isMoving8 && !isStopping8) {
+        FORWARD();                  
+        isMoving8 = true;       
+        actionMillis8 = currentMillis; 
+      }
+
+      if (isMoving8 && (currentMillis - actionMillis8 >= forwardSS)) {
+        STOP();
+        isMoving8 = false;    
+        isStopping8 = true;        
+        previousMillis8 = currentMillis; 
+      }
+
+      if (isStopping8 && (currentMillis - previousMillis8 >= stopInterval)) {
+        isStopping8 = false;
+      }
+      break;
+    case 9:
+      if (!isMoving9 && !isStopping9) {
+        LEFT();
+        isMoving9 = true;
+        actionMillis9 = currentMillis;
+      }
+      if (isMoving9 && (currentMillis - actionMillis9 >= 500)) { // Forward 1 second
+        BACKWARD();
+        actionMillis9 = currentMillis;
+        isMoving9 = false;
+        isStopping9 = true;
+      }
+      if (isStopping9 && (currentMillis - actionMillis9 >= 1000)) { // Left 0.5 second
+        RIGHT();
+        actionMillis9 = currentMillis;
+        isMoving9 = true;
+        isStopping9 = false;
+      }
+      if (isMoving9 && (currentMillis - actionMillis9 >= 500)) { // Forward 1 second
+        BACKWARD();
+        actionMillis9 = currentMillis;
+        isMoving9 = false;
+        isStopping9 = true;
+      }
+      if (isStopping9 && (currentMillis - actionMillis9 >= 1000)) { // Right 0.5 second
+        STOP();
+        isMoving9 = false;
+        isStopping9 = false;
+      }
+
+      if (isStopping9 && (currentMillis - previousMillis9 >= stopInterval)) {
+        isStopping9 = false;
+      }
+      break;
+
+    case 10:
+      if (!isMoving10 && !isStopping10) {
+        FORWARD();
+        isMoving10 = true;
+        actionMillis10 = currentMillis;
+      }
+      if (isMoving10 && (currentMillis - actionMillis10 >= 1000)) { // Forward 1 second
+        LEFT();
+        actionMillis10 = currentMillis;
+        isMoving10 = false;
+        isStopping10 = true;
+      }
+      if (isStopping10 && (currentMillis - actionMillis10 >= 500)) { // Left 0.5 second
+        FORWARD();
+        actionMillis10 = currentMillis;
+        isMoving10 = true;
+        isStopping10 = false;
+      }
+      if (isMoving10 && (currentMillis - actionMillis10 >= 1000)) { // Forward 1 second
+        RIGHT();
+        actionMillis10 = currentMillis;
+        isMoving10 = false;
+        isStopping10 = true;
+      }
+      if (isStopping10 && (currentMillis - actionMillis10 >= 500)) { // Right 0.5 second
+        STOP();
+        isMoving10 = false;
+        isStopping10 = false;
+      }
+
+      if (isStopping10 && (currentMillis - previousMillis10 >= stopInterval)) {
+        isStopping10 = false;
+      }
       break;
     case 0:
       STOP();                  

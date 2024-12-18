@@ -15,6 +15,18 @@ int ButtonValue;
 int NodeState;
 int BtnState;
 
+bool NODE_1 = false;
+bool NODE_2 = false;
+bool NODE_3 = false;
+bool NODE_4 = false;
+bool NODE_5 = false;
+bool NODE_6 = false;
+bool NODE_7 = false;
+bool NODE_8 = false;
+bool NODE_9 = false;
+bool NODE_10 = false;
+bool NODE_11 = false;
+
 // Global copies of slaves
 esp_now_peer_info_t slave1;
 esp_now_peer_info_t slave2;
@@ -35,8 +47,8 @@ esp_now_peer_info_t slave10;
 
 int mac1[6] = {0xBE, 0xDD, 0xC2, 0x57, 0x8B, 0x03}; // BE:DD:C2:57:8B:03 ESP8266
 int mac2[6] = {0x08, 0xD1, 0xF9, 0x29, 0xC1, 0xFD}; // 08:D1:F9:29:C1:FD done ORANGE
-int mac3[6] = {0xD4, 0x8A, 0xFC, 0x9E, 0x83, 0xE1}; // D4:8A:FC:9E:83:E1 ALONE
-// int mac3[6] = {0x08, 0xD1, 0xF9, 0x37, 0x5C, 0x29}; // 08:D1:F9:37:5C:29 done BLUE
+// int mac3[6] = {0xD4, 0x8A, 0xFC, 0x9E, 0x83, 0xE1}; // D4:8A:FC:9E:83:E1 ALONE
+int mac3[6] = {0x08, 0xD1, 0xF9, 0x37, 0x5C, 0x29};  // 08:D1:F9:37:5C:29 done BLUE
 int mac4[6] = {0x08, 0xD1, 0xF9, 0xCC, 0x21, 0x7D}; // 08:D1:F9:CC:21:7D done GREY
 int mac5[6] = {0xE8, 0x6B, 0xEA, 0xDE, 0xB3, 0xA5}; // E8:6B:EA:DE:B3:A5 done GREEN
 int mac6[6] = {0xA6, 0xCF, 0x12, 0xDC, 0x84, 0xDF}; // A6:CF:12:DC:84:DF ESP8266 BLUE
@@ -189,59 +201,59 @@ void sendDataToSlaves() {
 
  // Check if the condition for sending data is met for each slave
   if (NodeState == 1 && BtnState == 1) {
-    digitalWrite(13,HIGH);
+    NODE_1 = true;
   } else if (NodeState == 1 && BtnState == 0 ) {
-    digitalWrite(13,LOW);
+    NODE_1 = false;
   }
   else if (NodeState == 2 && BtnState == 1 ) {
-    digitalWrite(12,HIGH);
+    NODE_2 = true;
   } else if (NodeState == 2 && BtnState == 0 ) {
-    digitalWrite(12,LOW);
+    NODE_2 = false;
   }
   else if (NodeState == 3 && BtnState == 1 ) {
-    digitalWrite(14,HIGH);
+    NODE_3 = true;
   } else if (NodeState == 3 && BtnState == 0 ) {
-    digitalWrite(14,LOW);
+    NODE_3 = false;
   }
   else if (NodeState == 4 && BtnState == 1 ) {
-    digitalWrite(27,HIGH);
+    NODE_4 = true;
   } else if (NodeState == 4 && BtnState == 0 ) {
-    digitalWrite(27,LOW);
+    NODE_4 = false;
   }
   else if (NodeState == 5 && BtnState == 1 ) {
-    digitalWrite(26,HIGH);
+    NODE_5 = true;
   } else if (NodeState == 5 && BtnState == 0 ) {
-    digitalWrite(26,LOW);
+    NODE_5 = false;
   }
   else if (NodeState == 6 && BtnState == 1 ) {
-    digitalWrite(33,HIGH);
+    NODE_6 = true;
   } else if (NodeState == 6 && BtnState == 0 ) {
-    digitalWrite(33,LOW);
+    NODE_6 = false;
   }
   else if (NodeState == 7 && BtnState == 1 ) {
-    digitalWrite(32,HIGH);
+    NODE_7 = true;
   } else if (NodeState == 7 && BtnState == 0 ) {
-    digitalWrite(32,LOW);
+    NODE_7 = false;
   }
   else if (NodeState == 8 && BtnState == 1 ) {
-    digitalWrite(15,HIGH);
+    NODE_8 = true;
   } else if (NodeState == 8 && BtnState == 0 ) {
-    digitalWrite(15,LOW);
+    NODE_8 = false;
   }
   else if (NodeState == 9 && BtnState == 1 ) {
-    digitalWrite(16,HIGH);
+    NODE_9 = true;
   } else if (NodeState == 9 && BtnState == 0 ) {
-    digitalWrite(16,LOW);
+    NODE_9 = false;
   }
   else if (NodeState == 10 && BtnState == 1 ) {
-    digitalWrite(17,HIGH);
+    NODE_10 = true;
   } else if (NodeState == 10 && BtnState == 0 ) {
-    digitalWrite(17,LOW);
+    NODE_10 = false;
   }
   else if (NodeState == 11 && BtnState == 1 ) {
-    digitalWrite(25,HIGH);
+    NODE_11 = true;
   } else if (NodeState == 11 && BtnState == 0 ) {
-    digitalWrite(25,LOW);
+    NODE_11 = false;
   }
 }
 
@@ -372,7 +384,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
     height: 100%;
 }
             .slider {appearance: none;width: 70%;height: 15px;border-radius: 10px;background: #ffffff;outline: none;opacity: 0.7;-webkit-transition: .2s;transition: opacity .2s;}
-            .slider::-webkit-slider-thumb {appearance: none;width: 30px;height: 30px;border-radius: 50%;background: var(--clr-neon);cursor: pointer;}
+            .slider::-webkit-slider-thumb {appearance: none;width: 10px;height: 30px;border-radius: 50%;background: var(--clr-neon);cursor: pointer;}
             .slider:hover {opacity: 1;}
             .label {font-family: "Balsamiq Sans", cursive;color: var(--clr-neon);text-shadow: 0 0 0.25em hsl(0 0% 100% / 0.3), 0 0 0.95em currentColor;font-size: 20px;}
             /* ----------------------------------- Stream Viewer */
@@ -424,6 +436,7 @@ font-size:25px;
 color: var(--clr-neon);
 position: relative;
 }
+
 .switch {
   position: relative;
   display: flex;
@@ -432,9 +445,10 @@ position: relative;
    border-radius: 30px;
    box-shadow: inset 0 0 50px var(--clr-neon), 0 0 30px var(--clr-neon);
    transition:all 0.5s;
-  width: 60px;
-  height: 34px;
+  width: 40px;
+  height: 21px;
 }
+
 .switch input { 
   outline: 0;
   opacity: 0;
@@ -457,10 +471,12 @@ position: relative;
 .slider2:before {
   position: absolute;
   content: "";
-  height: 26px;
-  width: 26px;
+
+  height: 17px;
+  width: 17px;
+
   left: 4px;
-  bottom: 4px;
+  bottom: 2px;
   background-color: white;
   -webkit-transition: .4s;
   transition: .4s;
@@ -477,7 +493,7 @@ input:focus + .slider2 {
 input:checked + .slider2::before {
   -webkit-transform: translateX(26px);
   -ms-transform: translateX(26px);
-  transform: translateX(26px);
+  transform: translateX(18px);
 }
 
 /* Rounded sliders */
@@ -490,14 +506,13 @@ input:checked + .slider2::before {
 }
 .slaves{
     display: grid;
-    width: 330px;
+    width: 300px;
     gap: 30px;
     align-items: center;
     justify-content:space-between;
-    grid-template-columns: 1fr 1fr 1fr ;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr ;
     position: absolute;
-    bottom: 10%;
-    left: 10%;
+    left: 5%;
 }
 /* .all{
     background-color: var(--clr-neon);
@@ -505,7 +520,7 @@ input:checked + .slider2::before {
  .all::before {
     -webkit-transform: translateX(26px);
     -ms-transform: translateX(26px);
-    transform: translateX(26px);
+    transform: translateX(18px);
     background-color: rgb(89, 136, 237);
 
 }
@@ -541,7 +556,9 @@ input:checked + .slider2::before {
     <button class="btn btn3 triangle-down" id="backward" ontouchstart='onTouchStartAndEnd("2")'
             ontouchend='onTouchStartAndEnd("0")'></button>
     </div>
-    <br/><br/><br/><br/><br/><br/><br/>
+
+    <br/><br/><br/><br/>
+
     <div  class="slaves" align=center>
         <label class="switch">
           <sup class="nodeName">NODE 1</sup>
@@ -554,11 +571,13 @@ input:checked + .slider2::before {
             <input type="checkbox" class="dis" id="NODE2" onchange="send_State_Cmd('2','NODE2')">
             <span class="slider2 round "></span>
           </label>
+
           <label class="switch">
             <sup class="nodeName">NODE 3</sup>
             <input type="checkbox" class="dis" id="NODE3" onchange="send_State_Cmd('3','NODE3')">
             <span class="slider2 round "></span>
           </label>
+
           <label class="switch">
           <sup class="nodeName">NODE 4</sup>
             <input type="checkbox" class="dis" id="NODE4" onchange="send_State_Cmd('4','NODE4')">
@@ -601,18 +620,29 @@ input:checked + .slider2::before {
             <input type="checkbox" class="dis" id="NODE10" onchange="send_State_Cmd('10','NODE10')">
             <span class="slider2 round "></span>
           </label>
-	 <label>
-	 <input type="button" id="myToggleButton" value="DIAMOND" style="color: orange;" onclick="toggle(this);">
+
+          <label>
+	 <input type="button" id="HEART" value="L" style="color: blue;" onclick="heart(this);">
 	 </label>
 
-          <label class="switch">
+          <label>
+	 <input type="button" id="DIAMOND" value="D" style="color: blue;" onclick="diamond(this);">
+	 </label>
+         <label class="switch">
             <sup class="nodeName">ALL NODES</sup>
 
             <input type="checkbox" id="NODE11" onchange="send_State_Cmd('11','NODE11')">
             <span class="slider2 round "></span>
           </label>
+         <label>
+	 <input type="button" id="SQUARE" value="S" style="color: blue;" onclick="square(this);">
+	 </label>
+         
+         <label>
+	 <input type="button" id="BIG_SQUARE" value="B" style="color: blue;" onclick="big_square(this);">
+	 </label>
+
     </div>
-</br>
 
 
 
@@ -629,15 +659,48 @@ input:checked + .slider2::before {
         websocket.onmessage = function (event) {};
       }
       
-      function toggle(button) {
-            if (button.value === "HOME") {
-                button.value = "DIAMOND";
-                console.log("ON");
+      function diamond(button) {
+            if (button.value === "H") {
+                button.value = "D";
+                console.log("OFF");
                 websocket.send("5");
             } else {
-                button.value = "HOME";
-                console.log("OFF");
+                button.value = "H";
+                console.log("ON");
                 websocket.send("6");
+            }
+        }
+      function square(button) {
+            if (button.value === "H") {
+                button.value = "S";
+                console.log("OFF");
+                websocket.send("7");
+            } else {
+                button.value = "H";
+                console.log("ON");
+                websocket.send("8");
+            }
+        }
+      function big_square(button) {
+            if (button.value === "H") {
+                button.value = "B";
+                console.log("OFF");
+                websocket.send("9");
+            } else {
+                button.value = "H";
+                console.log("ON");
+                websocket.send("10");
+            }
+        }
+      function heart(button) {
+            if (button.value === "H") {
+                button.value = "L";
+                console.log("OFF");
+                websocket.send("11");
+            } else {
+                button.value = "H";
+                console.log("ON");
+                websocket.send("12");
             }
         }
 
@@ -761,18 +824,6 @@ void setup() {
   Serial.print("STA MAC: "); Serial.println(WiFi.macAddress());
   InitESPNow();
   esp_now_register_send_cb(OnDataSent);
-
-  pinMode(13,OUTPUT);
-  pinMode(12,OUTPUT);
-  pinMode(14,OUTPUT);
-  pinMode(27,OUTPUT);
-  pinMode(26,OUTPUT);
-  pinMode(25,OUTPUT);
-  pinMode(33,OUTPUT);
-  pinMode(32,OUTPUT);
-  pinMode(15,OUTPUT);
-  pinMode(16,OUTPUT);
-  pinMode(17,OUTPUT);
   
   WiFi.softAP(ssid,password);
   IPAddress IP = WiFi.softAPIP(
@@ -809,27 +860,27 @@ void loop() {
 
   sendDataToSlaves();
 
-  if(digitalRead(13)==HIGH){
+  if(NODE_1 == true){
     sendData(slave1);
-  }if(digitalRead(12)==HIGH){
+  }if(NODE_2 == true){
     sendData(slave2);
-  }if(digitalRead(14)==HIGH){
+  }if(NODE_3 == true){
     sendData(slave3);
-  }if(digitalRead(27)==HIGH){
+  }if(NODE_4 == true){
     sendData(slave4);
-  }if(digitalRead(26)==HIGH){
+  }if(NODE_5 == true){
     sendData(slave5);
-  }if(digitalRead(33)==HIGH){
+  }if(NODE_6 == true){
     sendData(slave6);
-  }if(digitalRead(32)==HIGH){
+  }if(NODE_7 == true){
     sendData(slave7);
-  }if(digitalRead(15)==HIGH){
+  }if(NODE_8 == true){
     sendData(slave8);
-  }if(digitalRead(16)==HIGH){
+  }if(NODE_9 == true){
     sendData(slave9);
-  }if(digitalRead(17)==HIGH){
+  }if(NODE_10 == true){
     sendData(slave10);
-  }if(digitalRead(25)==HIGH){
+  }if(NODE_11 == true){
     sendData(slave1);
     sendData(slave2);
     sendData(slave3);

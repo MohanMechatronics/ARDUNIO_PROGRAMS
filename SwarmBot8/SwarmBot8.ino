@@ -24,8 +24,18 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &I2Cbus, OLED_RESET);
 int xp = 16;
 int mood = 4;
 
+unsigned long previousMillis5 = 0;       // Timer for stopping period for case 5 (10 seconds)
+unsigned long actionMillis5 = 0;         // Timer for action in case 5 (2 seconds)
+unsigned long previousMillis6 = 0;       // Timer for stopping period for case 6 (10 seconds)
+unsigned long actionMillis6 = 0;         // Timer for action in case 6 (2 seconds)
 
-void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len); // Corrected function signature
+const long stopInterval = 10000;         // 10 seconds stop time
+const long backwardDuration = 2000;          // 2 seconds for forward action
+
+bool isMoving5 = false;                  // Flag to track if robot is moving for case 5
+bool isStopping5 = false;                // Flag to track stop state for case 5
+bool isMoving6 = false;                  // Flag to track if robot is moving for case 6
+bool isStopping6 = false;  
 
 void InitESPNow() {
   WiFi.disconnect();
@@ -87,6 +97,9 @@ void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len) { // Correct
   Serial.print("Last Packet Recv from: "); Serial.println(macStr);
   Serial.print("Last Packet Recv Data: "); Serial.println(*data);
   Serial.println("");
+
+  unsigned long currentMillis = millis(); // Track the current time
+
   switch (*data) {
     case 1: //FORWARD
       FORWARD();                  
@@ -100,6 +113,47 @@ void OnDataRecv(uint8_t *mac_addr, uint8_t *data, uint8_t data_len) { // Correct
     case 4: //RIGHT 
       RIGHT();                
       break;
+    case 5:
+    if (!isMoving5 && !isStopping5) {
+        FORWARD();                    // Start moving forward for 2 seconds
+        isMoving5 = true;             // Set flag to indicate the robot is moving
+        actionMillis5 = currentMillis; // Record the time when action started
+      }
+
+      // Check if the robot has been moving for 2 seconds
+      if (isMoving5 && (currentMillis - actionMillis5 >= backwardDuration)) {
+        STOP();                       // Stop after 2 seconds of movement
+        isMoving5 = false;            // Reset the moving flag
+        isStopping5 = true;           // Set flag to indicate stop period starts
+        previousMillis5 = currentMillis; // Record the time when stop period starts
+      }
+
+      // Check if the stop period of 10 seconds has passed
+      if (isStopping5 && (currentMillis - previousMillis5 >= stopInterval)) {
+        isStopping5 = false;          // Reset the stop flag after 10 seconds
+      }
+      break;
+
+    case 6: // Case 6: Left for 2 seconds, stop for 100 seconds
+      if (!isMoving6 && !isStopping6) {
+        BACKWARD();                       // Start moving BACKWARD() for 2 seconds
+        isMoving6 = true;             // Set flag to indicate the robot is moving
+        actionMillis6 = currentMillis; // Record the time when action started
+      }
+
+      // Check if the robot has been moving for 2 seconds
+      if (isMoving6 && (currentMillis - actionMillis6 >= backwardDuration)) {
+        STOP();                       // Stop after 2 seconds of movement
+        isMoving6 = false;            // Reset the moving flag
+        isStopping6 = true;           // Set flag to indicate stop period starts
+        previousMillis6 = currentMillis; // Record the time when stop period starts
+      }
+
+      // Check if the stop period of 10 seconds has passed
+      if (isStopping6 && (currentMillis - previousMillis6 >= stopInterval)) {
+        isStopping6 = false;          // Reset the stop flag after 10 seconds
+      }
+      break; 
     case 0:
       STOP();                  
       break;

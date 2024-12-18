@@ -4,22 +4,20 @@
 
 BluetoothSerial SerialBT;
 
-
-String MACadd = "0C:B8:15:F6:53:52"; // Write Robot's MAC address
-uint8_t address[6] = {0x0C, 0xB8, 0x15, 0xF6, 0x53, 0x52}; // 0x08, 0xD1, 0xF9, 0x35, 0x47, 0x0A
+String MACadd = "CC:7B:5C:1E:F6:82"; // Robot's MAC address
+uint8_t address[6] = {0xCC, 0x7B, 0x5C, 0x1E, 0xF6, 0x82}; // 
 
 // MPU control/status vars
 MPU6050 mpu;
 bool dmpReady = false;
-uint8_t devStatus; 
+uint8_t devStatus;
 uint8_t fifoBuffer[64];
 Quaternion q;
 VectorFloat gravity;
 float ypr[3];
 
 void setupMPU() {
-
-  Wire.begin();// For ESP32
+  Wire.begin(); // For ESP32
   Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
 
   mpu.initialize();
@@ -49,8 +47,6 @@ void setup() {
 }
 
 void loop() {
-  uint8_t send_data[3];
-
   if (!dmpReady) {
     Serial.println("MPU initialization failed. Check your connections and try again.");
     delay(1000); // Wait for a moment before retrying
@@ -64,24 +60,28 @@ void loop() {
 
     int xAxisValue = constrain(ypr[2] * 180 / M_PI, -90, 90);
     int yAxisValue = constrain(ypr[1] * 180 / M_PI, -90, 90);
-    int zAxisValue = constrain(ypr[0] * 180 / M_PI, -90, 90);
 
-    int xAxis = map(xAxisValue, -90, 90, 0, 254);
-    int yAxis = map(yAxisValue, -90, 90, 0, 254);
-    int zAxis = map(zAxisValue, -90, 90, 0, 254);
+    xAxisValue = map(xAxisValue, -90, 90, 0, 254);
+    yAxisValue = map(yAxisValue, -90, 90, 0, 254);
 
-    send_data[0] = xAxis;
-    send_data[1] = yAxis;
-    send_data[2] = zAxis;
+    char command = 'S'; // Default to STOP
 
-    Serial.print("Data: ");
-    for (int i = 0; i < 3; i++) {
-      Serial.print(send_data[i]);
-      Serial.print(" ");
+    if (yAxisValue < 75) {
+      command = 'F'; // Forward
+    } else if (xAxisValue > 175) {
+      command = 'L'; // Turn Left
+    } else if (xAxisValue < 75) {
+      command = 'R'; // Turn Right
+    } else if (yAxisValue > 175) {
+      command = 'B'; // Backward
+    } else if (yAxisValue == 80) {
+      command = 'S'; // Stop
     }
-    Serial.println();
 
-    SerialBT.write(send_data, 3);
+    Serial.print("Command: ");
+    Serial.println(command);
+
+    SerialBT.write(command); // Send the command over Bluetooth
     delay(50);
   }
 }

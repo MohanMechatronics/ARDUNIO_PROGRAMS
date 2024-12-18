@@ -53,11 +53,11 @@ struct MOTOR_PINS
 };
 
 std::vector<MOTOR_PINS> motorPins = 
-{
-  {14, 27},  //FRONT_RIGHT_MOTOR
-  {26, 25},  //BACK_RIGHT_MOTOR
-  {4, 16},  //FRONT_LEFT_MOTOR
-  {17, 5},  //BACK_LEFT_MOTOR   
+{ 
+  {25, 14},  //FRONT_RIGHT_MOTOR
+  {27, 26},  //BACK_RIGHT_MOTOR
+  {4, 5},  //FRONT_LEFT_MOTOR
+  {18, 19},  //BACK_LEFT_MOTOR  
 };
 
 const char* ssid     = "MECHATRONICS";
@@ -161,7 +161,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
         <tr>
           <td
             id="box1"
-            ontouchstart='onTouchStartAndEnd("6")'
+            ontouchstart='onTouchStartAndEnd("5")'
             ontouchend='onTouchStartAndEnd("0")'
           >
             <span
@@ -183,7 +183,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
             >
           </td>
           <td
-            ontouchstart='onTouchStartAndEnd("5")'
+            ontouchstart='onTouchStartAndEnd("6")'
             ontouchend='onTouchStartAndEnd("0")'
           >
             <span
@@ -197,7 +197,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
 
         <tr>
           <td
-            ontouchstart='onTouchStartAndEnd("4")'
+            ontouchstart='onTouchStartAndEnd("3")'
             ontouchend='onTouchStartAndEnd("0")'
           >
             <span
@@ -209,7 +209,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
           </td>
           <td class="middle marrow" onclick="stop()">STOP</td>
           <td
-            ontouchstart='onTouchStartAndEnd("3")'
+            ontouchstart='onTouchStartAndEnd("4")'
             ontouchend='onTouchStartAndEnd("0")'
           >
             <span class="arrows rarrow" style="display: block">&#8680;</span>
@@ -218,7 +218,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
 
         <tr>
           <td
-            ontouchstart='onTouchStartAndEnd("8")'
+            ontouchstart='onTouchStartAndEnd("7")'
             ontouchend='onTouchStartAndEnd("0")'
           >
             <span class="arrows blarrow" style="display: block">&#11019;</span>
@@ -230,7 +230,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
             <span class="arrows downarrow" style="display: block">&#8681;</span>
           </td>
           <td
-            ontouchstart='onTouchStartAndEnd("7")'
+            ontouchstart='onTouchStartAndEnd("8")'
             ontouchend='onTouchStartAndEnd("0")'
           >
             <span class="arrows brarrow" style="display: block">&#11018;</span>
@@ -239,7 +239,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
 
         <tr>
           <td
-            ontouchstart='onTouchStartAndEnd("10")'
+            ontouchstart='onTouchStartAndEnd("9")'
             ontouchend='onTouchStartAndEnd("0")'
           >
             <span class="circularArrows rrarrow" style="display: block"
@@ -248,7 +248,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
           </td>
           <td style="display: inline-table"></td>
           <td
-            ontouchstart='onTouchStartAndEnd("9")'
+            ontouchstart='onTouchStartAndEnd("10")'
             ontouchend='onTouchStartAndEnd("0")'
           >
             <span class="circularArrows lrarrow" style="display: block">
@@ -324,84 +324,96 @@ void processCarMovement(String inputValue)
       rotateMotor(FRONT_RIGHT_MOTOR, FORWARD);
       rotateMotor(BACK_RIGHT_MOTOR, FORWARD);
       rotateMotor(FRONT_LEFT_MOTOR, FORWARD);
-      rotateMotor(BACK_LEFT_MOTOR, FORWARD);                  
+      rotateMotor(BACK_LEFT_MOTOR, FORWARD);
+      mood = 3;                  
       break;
   
     case DOWN:
       rotateMotor(FRONT_RIGHT_MOTOR, BACKWARD);
       rotateMotor(BACK_RIGHT_MOTOR, BACKWARD);
       rotateMotor(FRONT_LEFT_MOTOR, BACKWARD);
-      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);   
+      rotateMotor(BACK_LEFT_MOTOR, BACKWARD); 
+      mood = 5;  
       break;
   
     case LEFT:
       rotateMotor(FRONT_RIGHT_MOTOR, FORWARD);
       rotateMotor(BACK_RIGHT_MOTOR, BACKWARD);
       rotateMotor(FRONT_LEFT_MOTOR, BACKWARD);
-      rotateMotor(BACK_LEFT_MOTOR, FORWARD);   
+      rotateMotor(BACK_LEFT_MOTOR, FORWARD); 
+      mood = 4;  
       break;
   
     case RIGHT:
       rotateMotor(FRONT_RIGHT_MOTOR, BACKWARD);
       rotateMotor(BACK_RIGHT_MOTOR, FORWARD);
       rotateMotor(FRONT_LEFT_MOTOR, FORWARD);
-      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);  
+      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);
+      mood = 2;  
       break;
   
     case UP_LEFT:
       rotateMotor(FRONT_RIGHT_MOTOR, FORWARD);
       rotateMotor(BACK_RIGHT_MOTOR, STOP);
       rotateMotor(FRONT_LEFT_MOTOR, STOP);
-      rotateMotor(BACK_LEFT_MOTOR, FORWARD);  
+      rotateMotor(BACK_LEFT_MOTOR, FORWARD); 
+      mood = 3; 
       break;
   
     case UP_RIGHT:
       rotateMotor(FRONT_RIGHT_MOTOR, STOP);
       rotateMotor(BACK_RIGHT_MOTOR, FORWARD);
       rotateMotor(FRONT_LEFT_MOTOR, FORWARD);
-      rotateMotor(BACK_LEFT_MOTOR, STOP);  
+      rotateMotor(BACK_LEFT_MOTOR, STOP);
+      mood = 5;  
       break;
   
     case DOWN_LEFT:
       rotateMotor(FRONT_RIGHT_MOTOR, STOP);
       rotateMotor(BACK_RIGHT_MOTOR, BACKWARD);
       rotateMotor(FRONT_LEFT_MOTOR, BACKWARD);
-      rotateMotor(BACK_LEFT_MOTOR, STOP);   
+      rotateMotor(BACK_LEFT_MOTOR, STOP);
+      mood = 4;   
       break;
   
     case DOWN_RIGHT:
       rotateMotor(FRONT_RIGHT_MOTOR, BACKWARD);
       rotateMotor(BACK_RIGHT_MOTOR, STOP);
       rotateMotor(FRONT_LEFT_MOTOR, STOP);
-      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);   
+      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);
+      mood = 2;   
       break;
   
     case TURN_LEFT:
       rotateMotor(FRONT_RIGHT_MOTOR, FORWARD);
       rotateMotor(BACK_RIGHT_MOTOR, FORWARD);
       rotateMotor(FRONT_LEFT_MOTOR, BACKWARD);
-      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);  
+      rotateMotor(BACK_LEFT_MOTOR, BACKWARD); 
+      mood = 3; 
       break;
   
     case TURN_RIGHT:
       rotateMotor(FRONT_RIGHT_MOTOR, BACKWARD);
       rotateMotor(BACK_RIGHT_MOTOR, BACKWARD);
       rotateMotor(FRONT_LEFT_MOTOR, FORWARD);
-      rotateMotor(BACK_LEFT_MOTOR, FORWARD);   
+      rotateMotor(BACK_LEFT_MOTOR, FORWARD); 
+      mood = 3;  
       break;
   
     case STOP:
       rotateMotor(FRONT_RIGHT_MOTOR, STOP);
       rotateMotor(BACK_RIGHT_MOTOR, STOP);
       rotateMotor(FRONT_LEFT_MOTOR, STOP);
-      rotateMotor(BACK_LEFT_MOTOR, STOP);    
+      rotateMotor(BACK_LEFT_MOTOR, STOP); 
+       mood = 1;  
       break;
   
     default:
       rotateMotor(FRONT_RIGHT_MOTOR, STOP);
       rotateMotor(BACK_RIGHT_MOTOR, STOP);
       rotateMotor(FRONT_LEFT_MOTOR, STOP);
-      rotateMotor(BACK_LEFT_MOTOR, STOP);    
+      rotateMotor(BACK_LEFT_MOTOR, STOP);
+      mood = 1;    
       break;
   }
 }

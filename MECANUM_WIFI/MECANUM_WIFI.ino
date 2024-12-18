@@ -54,14 +54,14 @@ struct MOTOR_PINS
 
 std::vector<MOTOR_PINS> motorPins = 
 {
-  {4, 5},  //FRONT_RIGHT_MOTOR
-  {18, 19},  //BACK_RIGHT_MOTOR
-  {14, 27},  //FRONT_LEFT_MOTOR
-  {26, 25},  //BACK_LEFT_MOTOR   
+  {13, 27},  //FRONT_RIGHT_MOTOR
+  {26, 25},  //BACK_RIGHT_MOTOR
+  {23, 4},  //FRONT_LEFT_MOTOR
+  {19,18},  //BACK_LEFT_MOTOR   
 };
 
 const char* ssid     = "OMNIDIRECTIONAL";
-const char* password     = "otomatiks";
+const char* password     = "mechatronics";
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -150,7 +150,7 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
   <body class="noselect" align="center">
     <h2 style="color: rgb(255, 255, 255); text-align: center">OMNIDIRECTIONL ROBOT</h2>
     <h2 style="color: rgb(255, 255, 255); text-align: center">
-      OTOMATIKS TAMBARAM
+      MECHATRONICS
     </h2>
     <div class="id">
       <table
@@ -324,84 +324,96 @@ void processCarMovement(String inputValue)
       rotateMotor(FRONT_RIGHT_MOTOR, FORWARD);
       rotateMotor(BACK_RIGHT_MOTOR, FORWARD);
       rotateMotor(FRONT_LEFT_MOTOR, FORWARD);
-      rotateMotor(BACK_LEFT_MOTOR, FORWARD);                  
+      rotateMotor(BACK_LEFT_MOTOR, FORWARD);
+      mood = 3;                  
       break;
   
     case DOWN:
       rotateMotor(FRONT_RIGHT_MOTOR, BACKWARD);
       rotateMotor(BACK_RIGHT_MOTOR, BACKWARD);
       rotateMotor(FRONT_LEFT_MOTOR, BACKWARD);
-      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);   
+      rotateMotor(BACK_LEFT_MOTOR, BACKWARD); 
+      mood = 5;  
       break;
   
     case LEFT:
       rotateMotor(FRONT_RIGHT_MOTOR, FORWARD);
       rotateMotor(BACK_RIGHT_MOTOR, BACKWARD);
       rotateMotor(FRONT_LEFT_MOTOR, BACKWARD);
-      rotateMotor(BACK_LEFT_MOTOR, FORWARD);   
+      rotateMotor(BACK_LEFT_MOTOR, FORWARD); 
+      mood = 4;  
       break;
   
     case RIGHT:
       rotateMotor(FRONT_RIGHT_MOTOR, BACKWARD);
       rotateMotor(BACK_RIGHT_MOTOR, FORWARD);
       rotateMotor(FRONT_LEFT_MOTOR, FORWARD);
-      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);  
+      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);
+      mood = 2;  
       break;
   
     case UP_LEFT:
       rotateMotor(FRONT_RIGHT_MOTOR, FORWARD);
       rotateMotor(BACK_RIGHT_MOTOR, STOP);
       rotateMotor(FRONT_LEFT_MOTOR, STOP);
-      rotateMotor(BACK_LEFT_MOTOR, FORWARD);  
+      rotateMotor(BACK_LEFT_MOTOR, FORWARD); 
+      mood = 3; 
       break;
   
     case UP_RIGHT:
       rotateMotor(FRONT_RIGHT_MOTOR, STOP);
       rotateMotor(BACK_RIGHT_MOTOR, FORWARD);
       rotateMotor(FRONT_LEFT_MOTOR, FORWARD);
-      rotateMotor(BACK_LEFT_MOTOR, STOP);  
+      rotateMotor(BACK_LEFT_MOTOR, STOP);
+      mood = 5;  
       break;
   
     case DOWN_LEFT:
       rotateMotor(FRONT_RIGHT_MOTOR, STOP);
       rotateMotor(BACK_RIGHT_MOTOR, BACKWARD);
       rotateMotor(FRONT_LEFT_MOTOR, BACKWARD);
-      rotateMotor(BACK_LEFT_MOTOR, STOP);   
+      rotateMotor(BACK_LEFT_MOTOR, STOP);
+      mood = 4;   
       break;
   
     case DOWN_RIGHT:
       rotateMotor(FRONT_RIGHT_MOTOR, BACKWARD);
       rotateMotor(BACK_RIGHT_MOTOR, STOP);
       rotateMotor(FRONT_LEFT_MOTOR, STOP);
-      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);   
+      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);
+      mood = 2;   
       break;
   
     case TURN_LEFT:
       rotateMotor(FRONT_RIGHT_MOTOR, FORWARD);
       rotateMotor(BACK_RIGHT_MOTOR, FORWARD);
       rotateMotor(FRONT_LEFT_MOTOR, BACKWARD);
-      rotateMotor(BACK_LEFT_MOTOR, BACKWARD);  
+      rotateMotor(BACK_LEFT_MOTOR, BACKWARD); 
+      mood = 3; 
       break;
   
     case TURN_RIGHT:
       rotateMotor(FRONT_RIGHT_MOTOR, BACKWARD);
       rotateMotor(BACK_RIGHT_MOTOR, BACKWARD);
       rotateMotor(FRONT_LEFT_MOTOR, FORWARD);
-      rotateMotor(BACK_LEFT_MOTOR, FORWARD);   
+      rotateMotor(BACK_LEFT_MOTOR, FORWARD); 
+      mood = 3;  
       break;
   
     case STOP:
       rotateMotor(FRONT_RIGHT_MOTOR, STOP);
       rotateMotor(BACK_RIGHT_MOTOR, STOP);
       rotateMotor(FRONT_LEFT_MOTOR, STOP);
-      rotateMotor(BACK_LEFT_MOTOR, STOP);    
+      rotateMotor(BACK_LEFT_MOTOR, STOP); 
+       mood = 1;  
       break;
   
     default:
       rotateMotor(FRONT_RIGHT_MOTOR, STOP);
       rotateMotor(BACK_RIGHT_MOTOR, STOP);
       rotateMotor(FRONT_LEFT_MOTOR, STOP);
-      rotateMotor(BACK_LEFT_MOTOR, STOP);    
+      rotateMotor(BACK_LEFT_MOTOR, STOP);
+      mood = 1;    
       break;
   }
 }
