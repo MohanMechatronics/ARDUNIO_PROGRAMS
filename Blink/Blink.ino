@@ -1,8 +1,8 @@
-#define LED_Blue 2
+#define LED_Blue 2 //2
 #define LED_red 13
 void setup() {
  // initialize digital pin LED_BUILTSIN as an output.
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(LED_Blue, OUTPUT);
   pinMode(LED_red, OUTPUT);
 }

@@ -1,179 +1,446 @@
-#include <esp_now.h>
+#include "esp_camera.h"
+#include <Arduino.h>
 #include <WiFi.h>
-#include <TFT_eSPI.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <iostream>
+#include <sstream>
 
-// Define pin numbers
-#define UP_PIN 14
-#define DOWN_PIN 27
-#define LEFT_PIN 26
-#define RIGHT_PIN 25
+#define LIGHT_PIN 4
 
-// Maximum number of devices
-#define MAX_DEVICES 5
+const int PWMFreq = 1000; /* 1 KHz */
+const int PWMResolution = 8;
+const int PWMLightChannel = 3;
 
-// Universal MAC Address (Broadcast)
-uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+//Camera related constants
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
+#define Y9_GPIO_NUM       35
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       39
+#define Y6_GPIO_NUM       36
+#define Y5_GPIO_NUM       21
+#define Y4_GPIO_NUM       19
+#define Y3_GPIO_NUM       18
+#define Y2_GPIO_NUM        5
+#define VSYNC_GPIO_NUM    25
+#define HREF_GPIO_NUM     23
+#define PCLK_GPIO_NUM     22
 
-// Data structure for device data
-typedef struct struct_message {
-  char color[10];
-  char numberPlate[15];
-  int direction; // 0-Stop, 1-Up, 2-Down, 3-Left, 4-Right
-} struct_message;
+const char* ssid     = "MyWiFiCar";
+const char* password = "12345678";
 
-// Create instances for sending and receiving data
-struct_message myData; // For controller's data
-struct_message deviceData[MAX_DEVICES]; // Array to hold data for multiple devices
-int deviceCount = 0; // Track connected devices
+AsyncWebServer server(80);
+AsyncWebSocket wsCamera("/Camera");
+AsyncWebSocket wsCarInput("/CarInput");
+uint32_t cameraClientId = 0;
 
-// TFT instance
-TFT_eSPI tft = TFT_eSPI();
-
-// Direction descriptions
-const char *directions[] = {"S", "F", "B", "L", "R"};
-
-// Callback when data is sent
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  Serial.print("Send Status: ");
-  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Success" : "Fail");
-}
-
-// Function to find or add a device by color
-int findOrAddDevice(const char *color) {
-  // Check if the device already exists
-  for (int i = 0; i < deviceCount; i++) {
-    if (strcmp(deviceData[i].color, color) == 0) {
-      return i; // Return index if found
+const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+    .arrows {
+      font-size:40px;
+      color:red;
     }
+    .circularArrows {
+      font-size:50px;
+      color:blue;
+    }
+    td.button {
+      background-color:black;
+      border-radius:25%;
+      box-shadow: 5px 5px #888888;
+    }
+    td.button:active {
+      transform: translate(5px,5px);
+      box-shadow: none; 
+    }
+
+    .noselect {
+      -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Safari */
+         -khtml-user-select: none; /* Konqueror HTML */
+           -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* Internet Explorer/Edge */
+                user-select: none; /* Non-prefixed version, currently
+                                      supported by Chrome and Opera */
+    }
+
+    .slidecontainer {
+      width: 100%;
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 15px;
+      border-radius: 5px;
+      background: #d3d3d3;
+      outline: none;
+      opacity: 0.7;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+
+    .slider:hover {
+      opacity: 1;
+    }
+  
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: red;
+      cursor: pointer;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: red;
+      cursor: pointer;
+    }
+
+    </style>
+  
+  </head>
+  <body class="noselect" align="center" style="background-color:white">
+     
+    <!--h2 style="color: teal;text-align:center;">Wi-Fi Camera &#128663; Control</h2-->
+    
+    <table id="mainTable" style="width:400px;margin:auto;table-layout:fixed" CELLSPACING=10>
+      <tr>
+        <img id="cameraImage" src="" style="width:400px;height:250px"></td>
+      </tr> 
+      <tr>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","5")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#11017;</span></td>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","1")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#8679;</span></td>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","6")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#11016;</span></td>
+      </tr>
+      <tr>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","3")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#8678;</span></td>
+        <td class="button"></td>    
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","4")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#8680;</span></td>
+      </tr>
+      <tr>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","7")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#11019;</span></td>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","2")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#8681;</span></td>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","8")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#11018;</span></td>
+      </tr>
+      <tr>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","9")' ontouchend='sendButtonInput("MoveCar","0")'><span class="circularArrows" >&#8634;</span></td>
+        <td></td>
+        <td class="button" ontouchstart='sendButtonInput("MoveCar","10")' ontouchend='sendButtonInput("MoveCar","0")'><span class="circularArrows" >&#8635;</span></td>
+      </tr>
+      <tr/><tr/>
+      <tr>
+        <td style="text-align:left"><b>Speed:</b></td>
+        <td colspan=2>
+         <div class="slidecontainer">
+            <input type="range" min="0" max="255" value="150" class="slider" id="Speed" oninput='sendButtonInput("Speed",value)'>
+          </div>
+        </td>
+      </tr>        
+      <tr>
+        <td style="text-align:left"><b>Light:</b></td>
+        <td colspan=2>
+          <div class="slidecontainer">
+            <input type="range" min="0" max="255" value="0" class="slider" id="Light" oninput='sendButtonInput("Light",value)'>
+          </div>
+        </td>   
+      </tr>
+      <tr>
+        <td style="text-align:left"><b>Pan:</b></td>
+        <td colspan=2>
+         <div class="slidecontainer">
+            <input type="range" min="0" max="180" value="90" class="slider" id="Pan" oninput='sendButtonInput("Pan",value)'>
+          </div>
+        </td>
+      </tr>        
+      <tr>
+        <td style="text-align:left"><b>Tilt:</b></td>
+        <td colspan=2>
+          <div class="slidecontainer">
+            <input type="range" min="0" max="180" value="90" class="slider" id="Tilt" oninput='sendButtonInput("Tilt",value)'>
+          </div>
+        </td>   
+      </tr>      
+    </table>
+  
+    <script>
+      var webSocketCameraUrl = "ws:\/\/" + window.location.hostname + "/Camera";
+      var webSocketCarInputUrl = "ws:\/\/" + window.location.hostname + "/CarInput";      
+      var websocketCamera;
+      var websocketCarInput;
+      
+      function initCameraWebSocket() 
+      {
+        websocketCamera = new WebSocket(webSocketCameraUrl);
+        websocketCamera.binaryType = 'blob';
+        websocketCamera.onopen    = function(event){};
+        websocketCamera.onclose   = function(event){setTimeout(initCameraWebSocket, 2000);};
+        websocketCamera.onmessage = function(event)
+        {
+          var imageId = document.getElementById("cameraImage");
+          imageId.src = URL.createObjectURL(event.data);
+        };
+      }
+      
+      function initCarInputWebSocket() 
+      {
+        websocketCarInput = new WebSocket(webSocketCarInputUrl);
+        websocketCarInput.onopen    = function(event)
+        {
+          sendButtonInput("Speed", document.getElementById("Speed").value);
+          sendButtonInput("Light", document.getElementById("Light").value);
+          sendButtonInput("Pan", document.getElementById("Pan").value);
+          sendButtonInput("Tilt", document.getElementById("Tilt").value);
+        };
+        websocketCarInput.onclose   = function(event){setTimeout(initCarInputWebSocket, 2000);};
+        websocketCarInput.onmessage = function(event){};        
+      }
+      
+      function initWebSocket() 
+      {
+        initCameraWebSocket ();
+        initCarInputWebSocket();
+      }
+
+      function sendButtonInput(key, value) 
+      {
+        var data = key + "," + value;
+        websocketCarInput.send(data);
+      }
+    
+      window.onload = initWebSocket;
+      document.getElementById("mainTable").addEventListener("touchend", function(event){
+        event.preventDefault()
+      });      
+    </script>
+  </body>    
+</html>
+)HTMLHOMEPAGE";
+
+void sendCarCommands(std::string inputCommand)
+{
+  Serial.println(inputCommand.c_str());
+}
+
+void handleRoot(AsyncWebServerRequest *request) 
+{
+  request->send_P(200, "text/html", htmlHomePage);
+}
+
+void handleNotFound(AsyncWebServerRequest *request) 
+{
+    request->send(404, "text/plain", "File Not Found");
+}
+
+void onCarInputWebSocketEvent(AsyncWebSocket *server, 
+                      AsyncWebSocketClient *client, 
+                      AwsEventType type,
+                      void *arg, 
+                      uint8_t *data, 
+                      size_t len) 
+{                      
+  switch (type) 
+  {
+    case WS_EVT_CONNECT:
+      //Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      //Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      sendCarCommands("MoveCar,0");
+      sendCarCommands("Pan,90"); 
+      sendCarCommands("Tilt,90");
+      ledcWrite(PWMLightChannel, 0);  
+      break;
+    case WS_EVT_DATA:
+      AwsFrameInfo *info;
+      info = (AwsFrameInfo*)arg;
+      if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) 
+      {
+        std::string myData = "";
+        myData.assign((char *)data, len);
+        std::istringstream ss(myData);
+        std::string key, value;
+        std::getline(ss, key, ',');
+        std::getline(ss, value, ',');
+        //Serial.printf("Key [%s] Value[%s]\n", key.c_str(), value.c_str()); 
+        int valueInt = atoi(value.c_str());     
+        if (key == "MoveCar" || key == "Speed" || key == "Pan" || key == "Tilt")
+        {
+          sendCarCommands(myData);    
+        }
+        else if (key == "Light")
+        {
+          ledcWrite(PWMLightChannel, valueInt);         
+        }     
+      }
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+    default:
+      break;  
+  }
+}
+
+void onCameraWebSocketEvent(AsyncWebSocket *server, 
+                      AsyncWebSocketClient *client, 
+                      AwsEventType type,
+                      void *arg, 
+                      uint8_t *data, 
+                      size_t len) 
+{                      
+  switch (type) 
+  {
+    case WS_EVT_CONNECT:
+      //Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      cameraClientId = client->id();
+      break;
+    case WS_EVT_DISCONNECT:
+      //Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      cameraClientId = 0;
+      break;
+    case WS_EVT_DATA:
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+    default:
+      break;  
+  }
+}
+
+void setupCamera()
+{
+  camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = Y2_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.xclk_freq_hz = 20000000;
+  config.pixel_format = PIXFORMAT_JPEG;
+  
+  config.frame_size = FRAMESIZE_VGA;
+  config.jpeg_quality = 10;
+  config.fb_count = 1;
+
+  // camera init
+  esp_err_t err = esp_camera_init(&config);
+  if (err != ESP_OK) 
+  {
+    //Serial.printf("Camera init failed with error 0x%x", err);
+    return;
+  }  
+
+  if (psramFound())
+  {
+    heap_caps_malloc_extmem_enable(20000);  
+    //Serial.printf("PSRAM initialized. malloc to take memory from psram above this size");    
+  }  
+}
+
+void sendCameraPicture()
+{
+  if (cameraClientId == 0)
+  {
+    return;
+  }
+  unsigned long  startTime1 = millis();
+  //capture a frame
+  camera_fb_t * fb = esp_camera_fb_get();
+  if (!fb) 
+  {
+      //Serial.println("Frame buffer could not be acquired");
+      return;
+  }
+
+  unsigned long  startTime2 = millis();
+  wsCamera.binary(cameraClientId, fb->buf, fb->len);
+  esp_camera_fb_return(fb);
+    
+  //Wait for message to be delivered
+  while (true)
+  {
+    AsyncWebSocketClient * clientPointer = wsCamera.client(cameraClientId);
+    if (!clientPointer || !(clientPointer->queueIsFull()))
+    {
+      break;
+    }
+    delay(1);
   }
   
-  // Add a new device if it doesn't exist
-  if (deviceCount < MAX_DEVICES) {
-    strcpy(deviceData[deviceCount].color, color);
-    return deviceCount++;
-  }
-  
-  return -1; // No space to add a new device
+  unsigned long  startTime3 = millis();  
+  //Serial.printf("Time taken Total: %d|%d|%d\n",startTime3 - startTime1, startTime2 - startTime1, startTime3-startTime2 );
 }
 
-// Callback when data is received
-void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  struct_message incomingReadings;
-  memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
+void setUpPinModes()
+{
+  //Set up PWM
+  ledcSetup(PWMLightChannel, PWMFreq, PWMResolution);
+  pinMode(LIGHT_PIN, OUTPUT);    
+  ledcAttachPin(LIGHT_PIN, PWMLightChannel);
 
-  Serial.printf("Received Data - Color: %s, Number Plate: %s, Direction: %d\n",
-                incomingReadings.color, incomingReadings.numberPlate, incomingReadings.direction);
-
-  // Find or add the device
-  int index = findOrAddDevice(incomingReadings.color);
-  if (index != -1) {
-    // Update the corresponding device data
-    strcpy(deviceData[index].numberPlate, incomingReadings.numberPlate);
-    deviceData[index].direction = incomingReadings.direction;
-
-    // Update the TFT display
-    updateTFT();
-  }
+  sendCarCommands("MoveCar,0"); 
+  sendCarCommands("Pan,90"); 
+  sendCarCommands("Tilt,90");  
 }
 
-// Function to update TFT display
-void updateTFT() {
-  tft.fillScreen(TFT_BLACK); // Clear the screen
-  tft.setTextSize(2);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-
-  // Display information for each connected device
-  for (int i = 0; i < deviceCount; i++) {
-    tft.setCursor(0, i * 30); // Adjust for the row
-    tft.print(deviceData[i].color);
-    tft.print(": ");
-    tft.print(deviceData[i].numberPlate);
-    tft.print(" ");
-    tft.print(directions[deviceData[i].direction]);
-  }
-}
-
-// Reset connection status if no data is received
-void resetConnections() {
-  deviceCount = 0;
-  tft.fillScreen(TFT_BLACK); // Clear the TFT screen
-}
-
-void setup() {
+void setup(void) 
+{
+  setUpPinModes();
   Serial.begin(115200);
 
-  // Initialize TFT
-  tft.init();
-  tft.setRotation(1); // Adjust rotation as needed
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.setTextSize(2);
-  tft.setCursor(0, 0);
-  tft.print("Initializing...");
+  WiFi.softAP(ssid, password);
+  IPAddress IP = WiFi.softAPIP();
+  //Serial.print("AP IP address: ");
+  //Serial.println(IP);
 
-  pinMode(UP_PIN, INPUT_PULLDOWN);
-  pinMode(DOWN_PIN, INPUT_PULLDOWN);
-  pinMode(LEFT_PIN, INPUT_PULLDOWN);
-  pinMode(RIGHT_PIN, INPUT_PULLDOWN);
+  server.on("/", HTTP_GET, handleRoot);
+  server.onNotFound(handleNotFound);
+      
+  wsCamera.onEvent(onCameraWebSocketEvent);
+  server.addHandler(&wsCamera);
 
-  WiFi.mode(WIFI_STA);
+  wsCarInput.onEvent(onCarInputWebSocketEvent);
+  server.addHandler(&wsCarInput);
 
-  if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    tft.setCursor(0, 30);
-    tft.print("ESP-NOW Failed");
-    return;
-  }
+  server.begin();
+  //Serial.println("HTTP server started");
 
-  esp_now_register_send_cb(OnDataSent);
-  esp_now_register_recv_cb(OnDataRecv);
-
-  esp_now_peer_info_t peerInfo = {};
-  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
-  peerInfo.channel = 0;
-  peerInfo.encrypt = false;
-
-  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-    Serial.println("Failed to add peer");
-    tft.setCursor(0, 30);
-    tft.print("Peer Add Failed");
-    return;
-  }
-
-  Serial.println("ESP-NOW Initialized");
-  tft.fillScreen(TFT_BLACK);
-  tft.setCursor(0, 0);
-  tft.print("WELCOME SIR");
-
-  // Initialize data
-  strcpy(myData.color, "B");
-  strcpy(myData.numberPlate, "TN01AB333");  // Example number plate
-  myData.direction = 0; // Initial direction is stop
+  setupCamera();
 }
 
-void loop() {
-  if (digitalRead(UP_PIN) == HIGH) {
-    myData.direction = 1; // Forward
-  } else if (digitalRead(DOWN_PIN) == HIGH) {
-    myData.direction = 2; // Backward
-  } else if (digitalRead(LEFT_PIN) == HIGH) {
-    myData.direction = 3; // Left
-  } else if (digitalRead(RIGHT_PIN) == HIGH) {
-    myData.direction = 4; // Right
-  } else {
-    myData.direction = 0; // Stop
-  }
 
-  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-  if (result == ESP_OK) {
-    Serial.println("data sent successfully");
-  } else {
-    Serial.println("Error sending data");
-  }
-
-  static unsigned long lastReceiveTime = millis();
-  if (millis() - lastReceiveTime > 5000) {
-    resetConnections();
-    lastReceiveTime = millis();
-  }
+void loop() 
+{
+  wsCamera.cleanupClients(); 
+  wsCarInput.cleanupClients(); 
+  sendCameraPicture(); 
+  //Serial.printf("SPIRam Total heap %d, SPIRam Free Heap %d\n", ESP.getPsramSize(), ESP.getFreePsram());
 }

@@ -188,7 +188,7 @@
 
 #define LED_GREEN   3
 
-#define LED_BLUE    13
+#define LED_BLUE    12
 
 #define LED_YELLOW  5
 
@@ -198,9 +198,9 @@
 
 #define BUTTON_RED    9
 
-#define BUTTON_GREEN  2
+#define BUTTON_GREEN  4
 
-#define BUTTON_BLUE   12
+#define BUTTON_BLUE   11
 
 #define BUTTON_YELLOW 6
 
@@ -208,9 +208,9 @@
 
 // Buzzer pin definitions
 
-#define BUZZER1  4
+#define BUZZER1  2
 
-#define BUZZER2  7
+#define BUZZER2  13
 
 
 

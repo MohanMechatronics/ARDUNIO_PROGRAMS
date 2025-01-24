@@ -49,7 +49,7 @@ AsyncWebSocket wsServoInput("/ServoInput");
 uint32_t cameraClientId = 0;
 
 #define LIGHT_PIN 4
-const int PWMLightChannel = 4;
+const int PWMLightChannel = 5;
 
 const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
 <!DOCTYPE html>
@@ -389,7 +389,7 @@ void sendCameraPicture()
   }
   
   unsigned long  startTime3 = millis();  
-  Serial.printf("Time taken Total: %d|%d|%d\n",startTime3 - startTime1, startTime2 - startTime1, startTime3-startTime2 );
+  // Serial.printf("Time taken Total: %d|%d|%d\n",startTime3 - startTime1, startTime2 - startTime1, startTime3-startTime2 );
 }
 
 void setUpPinModes()
@@ -413,13 +413,10 @@ void setup(void)
   setUpPinModes();
   Serial.begin(115200);
 
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
+    WiFi.softAP(ssid, password);
+  IPAddress IP = WiFi.softAPIP();
+  //Serial.print("AP IP address: ");
+  //Serial.println(IP);;
   
   Serial.print("Camera Ready! Use 'http://");
   Serial.print(WiFi.localIP());
