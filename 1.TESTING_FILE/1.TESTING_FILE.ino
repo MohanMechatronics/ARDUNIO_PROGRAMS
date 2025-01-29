@@ -1,446 +1,242 @@
-#include "esp_camera.h"
-#include <Arduino.h>
-#include <WiFi.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <iostream>
-#include <sstream>
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <ArduinoOTA.h>
 
-#define LIGHT_PIN 4
+// connections for drive Motor FR & BR
+//int enA = D3;
+int in1 = D5;
+int in2 = D6;
+// connections for drive Motor FL & BL
+int in3 = D7;
+int in4 = D8;
+//int enB = D6;
 
-const int PWMFreq = 1000; /* 1 KHz */
-const int PWMResolution = 8;
-const int PWMLightChannel = 3;
+String command;    // String to store app command state.
+int SPEED = 122;
+int speed_Coeff = 3;
 
-//Camera related constants
-#define PWDN_GPIO_NUM     32
-#define RESET_GPIO_NUM    -1
-#define XCLK_GPIO_NUM      0
-#define SIOD_GPIO_NUM     26
-#define SIOC_GPIO_NUM     27
-#define Y9_GPIO_NUM       35
-#define Y8_GPIO_NUM       34
-#define Y7_GPIO_NUM       39
-#define Y6_GPIO_NUM       36
-#define Y5_GPIO_NUM       21
-#define Y4_GPIO_NUM       19
-#define Y3_GPIO_NUM       18
-#define Y2_GPIO_NUM        5
-#define VSYNC_GPIO_NUM    25
-#define HREF_GPIO_NUM     23
-#define PCLK_GPIO_NUM     22
+ESP8266WebServer server(80);  // Create a webserver object that listens for HTTP request on port 80
 
-const char* ssid     = "MyWiFiCar";
-const char* password = "12345678";
+unsigned long previousMillis = 0;
 
-AsyncWebServer server(80);
-AsyncWebSocket wsCamera("/Camera");
-AsyncWebSocket wsCarInput("/CarInput");
-uint32_t cameraClientId = 0;
+String sta_ssid = "";      // set Wifi networks you want to connect to
+String sta_password = "";  // set password for Wifi networks
 
-const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
-<!DOCTYPE html>
-<html>
-  <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <style>
-    .arrows {
-      font-size:40px;
-      color:red;
-    }
-    .circularArrows {
-      font-size:50px;
-      color:blue;
-    }
-    td.button {
-      background-color:black;
-      border-radius:25%;
-      box-shadow: 5px 5px #888888;
-    }
-    td.button:active {
-      transform: translate(5px,5px);
-      box-shadow: none; 
-    }
 
-    .noselect {
-      -webkit-touch-callout: none; /* iOS Safari */
-        -webkit-user-select: none; /* Safari */
-         -khtml-user-select: none; /* Konqueror HTML */
-           -moz-user-select: none; /* Firefox */
-            -ms-user-select: none; /* Internet Explorer/Edge */
-                user-select: none; /* Non-prefixed version, currently
-                                      supported by Chrome and Opera */
-    }
+void setup() {
+  Serial.begin(115200);  // set up Serial library at 115200 bps
+  Serial.println();
+  Serial.println("*WiFi Robot Remote Control Mode - L298N 2A*");
+  Serial.println("------------------------------------------------");
 
-    .slidecontainer {
-      width: 100%;
-    }
+  pinMode(buzPin, OUTPUT);      // sets the buzzer pin as an Output
+  pinMode(ledPin, OUTPUT);      // sets the LED pin as an Output
+  pinMode(wifiLedPin, OUTPUT);  // sets the Wifi LED pin as an Output
+  digitalWrite(buzPin, LOW);
+  digitalWrite(ledPin, LOW);
+  digitalWrite(wifiLedPin, HIGH);
 
-    .slider {
-      -webkit-appearance: none;
-      width: 100%;
-      height: 15px;
-      border-radius: 5px;
-      background: #d3d3d3;
-      outline: none;
-      opacity: 0.7;
-      -webkit-transition: .2s;
-      transition: opacity .2s;
-    }
+  // Set all the motor control pins to outputs
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(in3, OUTPUT);
+  pinMode(in4, OUTPUT);
 
-    .slider:hover {
-      opacity: 1;
-    }
-  
-    .slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 25px;
-      height: 25px;
-      border-radius: 50%;
-      background: red;
-      cursor: pointer;
-    }
+ 
+  // Turn off motors - Initial state
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, LOW);
 
-    .slider::-moz-range-thumb {
-      width: 25px;
-      height: 25px;
-      border-radius: 50%;
-      background: red;
-      cursor: pointer;
-    }
 
-    </style>
-  
-  </head>
-  <body class="noselect" align="center" style="background-color:white">
-     
-    <!--h2 style="color: teal;text-align:center;">Wi-Fi Camera &#128663; Control</h2-->
-    
-    <table id="mainTable" style="width:400px;margin:auto;table-layout:fixed" CELLSPACING=10>
-      <tr>
-        <img id="cameraImage" src="" style="width:400px;height:250px"></td>
-      </tr> 
-      <tr>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","5")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#11017;</span></td>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","1")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#8679;</span></td>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","6")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#11016;</span></td>
-      </tr>
-      <tr>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","3")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#8678;</span></td>
-        <td class="button"></td>    
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","4")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#8680;</span></td>
-      </tr>
-      <tr>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","7")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#11019;</span></td>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","2")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#8681;</span></td>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","8")' ontouchend='sendButtonInput("MoveCar","0")'><span class="arrows" >&#11018;</span></td>
-      </tr>
-      <tr>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","9")' ontouchend='sendButtonInput("MoveCar","0")'><span class="circularArrows" >&#8634;</span></td>
-        <td></td>
-        <td class="button" ontouchstart='sendButtonInput("MoveCar","10")' ontouchend='sendButtonInput("MoveCar","0")'><span class="circularArrows" >&#8635;</span></td>
-      </tr>
-      <tr/><tr/>
-      <tr>
-        <td style="text-align:left"><b>Speed:</b></td>
-        <td colspan=2>
-         <div class="slidecontainer">
-            <input type="range" min="0" max="255" value="150" class="slider" id="Speed" oninput='sendButtonInput("Speed",value)'>
-          </div>
-        </td>
-      </tr>        
-      <tr>
-        <td style="text-align:left"><b>Light:</b></td>
-        <td colspan=2>
-          <div class="slidecontainer">
-            <input type="range" min="0" max="255" value="0" class="slider" id="Light" oninput='sendButtonInput("Light",value)'>
-          </div>
-        </td>   
-      </tr>
-      <tr>
-        <td style="text-align:left"><b>Pan:</b></td>
-        <td colspan=2>
-         <div class="slidecontainer">
-            <input type="range" min="0" max="180" value="90" class="slider" id="Pan" oninput='sendButtonInput("Pan",value)'>
-          </div>
-        </td>
-      </tr>        
-      <tr>
-        <td style="text-align:left"><b>Tilt:</b></td>
-        <td colspan=2>
-          <div class="slidecontainer">
-            <input type="range" min="0" max="180" value="90" class="slider" id="Tilt" oninput='sendButtonInput("Tilt",value)'>
-          </div>
-        </td>   
-      </tr>      
-    </table>
-  
-    <script>
-      var webSocketCameraUrl = "ws:\/\/" + window.location.hostname + "/Camera";
-      var webSocketCarInputUrl = "ws:\/\/" + window.location.hostname + "/CarInput";      
-      var websocketCamera;
-      var websocketCarInput;
-      
-      function initCameraWebSocket() 
-      {
-        websocketCamera = new WebSocket(webSocketCameraUrl);
-        websocketCamera.binaryType = 'blob';
-        websocketCamera.onopen    = function(event){};
-        websocketCamera.onclose   = function(event){setTimeout(initCameraWebSocket, 2000);};
-        websocketCamera.onmessage = function(event)
-        {
-          var imageId = document.getElementById("cameraImage");
-          imageId.src = URL.createObjectURL(event.data);
-        };
-      }
-      
-      function initCarInputWebSocket() 
-      {
-        websocketCarInput = new WebSocket(webSocketCarInputUrl);
-        websocketCarInput.onopen    = function(event)
-        {
-          sendButtonInput("Speed", document.getElementById("Speed").value);
-          sendButtonInput("Light", document.getElementById("Light").value);
-          sendButtonInput("Pan", document.getElementById("Pan").value);
-          sendButtonInput("Tilt", document.getElementById("Tilt").value);
-        };
-        websocketCarInput.onclose   = function(event){setTimeout(initCarInputWebSocket, 2000);};
-        websocketCarInput.onmessage = function(event){};        
-      }
-      
-      function initWebSocket() 
-      {
-        initCameraWebSocket ();
-        initCarInputWebSocket();
-      }
+  // set NodeMCU Wifi hostname based on chip mac address
+  String chip_id = String(ESP.getChipId(), HEX);
+  int i = chip_id.length() - 4;
+  chip_id = chip_id.substring(i);
+  chip_id = "WiFi_RC_Car-" + chip_id;
+  String hostname(chip_id);
 
-      function sendButtonInput(key, value) 
-      {
-        var data = key + "," + value;
-        websocketCarInput.send(data);
-      }
-    
-      window.onload = initWebSocket;
-      document.getElementById("mainTable").addEventListener("touchend", function(event){
-        event.preventDefault()
-      });      
-    </script>
-  </body>    
-</html>
-)HTMLHOMEPAGE";
+  Serial.println();
+  Serial.println("Hostname: " + hostname);
 
-void sendCarCommands(std::string inputCommand)
-{
-  Serial.println(inputCommand.c_str());
+  // first, set NodeMCU as STA mode to connect with a Wifi network
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(sta_ssid.c_str(), sta_password.c_str());
+  Serial.println("");
+  Serial.print("Connecting to: ");
+  Serial.println(sta_ssid);
+  Serial.print("Password: ");
+  Serial.println(sta_password);
+
+  // try to connect with Wifi network about 10 seconds
+  unsigned long currentMillis = millis();
+  previousMillis = currentMillis;
+  while (WiFi.status() != WL_CONNECTED && currentMillis - previousMillis <= 10000) {
+    delay(500);
+    Serial.print(".");
+    currentMillis = millis();
+  }
+
+  // if failed to connect with Wifi network set NodeMCU as AP mode
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("");
+    Serial.println("*WiFi-STA-Mode*");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+    digitalWrite(wifiLedPin, LOW);  // Wifi LED on when connected to Wifi as STA mode
+    delay(3000);
+  } else {
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(hostname.c_str());
+    IPAddress myIP = WiFi.softAPIP();
+    Serial.println("");
+    Serial.println("WiFi failed connected to " + sta_ssid);
+    Serial.println("");
+    Serial.println("*WiFi-AP-Mode*");
+    Serial.print("AP IP address: ");
+    Serial.println(myIP);
+    digitalWrite(wifiLedPin, HIGH);  // Wifi LED off when status as AP mode
+    delay(3000);
+  }
+
+
+  server.on("/", HTTP_handleRoot);     // call the 'handleRoot' function when a client requests URI "/"
+  server.onNotFound(HTTP_handleRoot);  // when a client requests an unknown URI (i.e. something other than "/"), call function "handleNotFound"
+  server.begin();                      // actually start the server
+
+  ArduinoOTA.begin();  // enable to receive update/uploade firmware via Wifi OTA
 }
 
-void handleRoot(AsyncWebServerRequest *request) 
-{
-  request->send_P(200, "text/html", htmlHomePage);
+void loop() {
+  ArduinoOTA.handle();    // listen for update OTA request from clients
+  server.handleClient();  // listen for HTTP requests from clients
+
+  command = server.arg("State");  // check HTPP request, if has arguments "State" then saved the value
+  if (command == "F") Forward();  // check string then call a function or set a value
+  else if (command == "B") Backward();
+  else if (command == "R") TurnRight();
+  else if (command == "L") TurnLeft();
+  else if (command == "G") ForwardLeft();
+  else if (command == "H") BackwardLeft();
+  else if (command == "I") ForwardRight();
+  else if (command == "J") BackwardRight();
+  else if (command == "S") Stop();
+  else if (command == "V") BeepHorn();
+  else if (command == "W") TurnLightOn();
+  else if (command == "w") TurnLightOff();
+  else if (command == "0") SPEED = 60;
+  else if (command == "1") SPEED = 70;
+  else if (command == "2") SPEED = 81;                                                                     
+  else if (command == "3") SPEED = 95;
+  else if (command == "4") SPEED = 105;
+  else if (command == "5") SPEED = 122;
+  else if (command == "6") SPEED = 150;
+  else if (command == "7") SPEED = 196;
+  else if (command == "8") SPEED = 272;
+  else if (command == "9") SPEED = 400;
+  else if (command == "q") SPEED = 1023;
 }
 
-void handleNotFound(AsyncWebServerRequest *request) 
-{
-    request->send(404, "text/plain", "File Not Found");
-}
+// function prototypes for HTTP handlers
+void HTTP_handleRoot(void) {
+  server.send(200, "text/html", "");  // Send HTTP status 200 (Ok) and send some text to the browser/client
 
-void onCarInputWebSocketEvent(AsyncWebSocket *server, 
-                      AsyncWebSocketClient *client, 
-                      AwsEventType type,
-                      void *arg, 
-                      uint8_t *data, 
-                      size_t len) 
-{                      
-  switch (type) 
-  {
-    case WS_EVT_CONNECT:
-      //Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-      break;
-    case WS_EVT_DISCONNECT:
-      //Serial.printf("WebSocket client #%u disconnected\n", client->id());
-      sendCarCommands("MoveCar,0");
-      sendCarCommands("Pan,90"); 
-      sendCarCommands("Tilt,90");
-      ledcWrite(PWMLightChannel, 0);  
-      break;
-    case WS_EVT_DATA:
-      AwsFrameInfo *info;
-      info = (AwsFrameInfo*)arg;
-      if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) 
-      {
-        std::string myData = "";
-        myData.assign((char *)data, len);
-        std::istringstream ss(myData);
-        std::string key, value;
-        std::getline(ss, key, ',');
-        std::getline(ss, value, ',');
-        //Serial.printf("Key [%s] Value[%s]\n", key.c_str(), value.c_str()); 
-        int valueInt = atoi(value.c_str());     
-        if (key == "MoveCar" || key == "Speed" || key == "Pan" || key == "Tilt")
-        {
-          sendCarCommands(myData);    
-        }
-        else if (key == "Light")
-        {
-          ledcWrite(PWMLightChannel, valueInt);         
-        }     
-      }
-      break;
-    case WS_EVT_PONG:
-    case WS_EVT_ERROR:
-      break;
-    default:
-      break;  
+  if (server.hasArg("State")) {
+    Serial.println(server.arg("State"));
   }
 }
 
-void onCameraWebSocketEvent(AsyncWebSocket *server, 
-                      AsyncWebSocketClient *client, 
-                      AwsEventType type,
-                      void *arg, 
-                      uint8_t *data, 
-                      size_t len) 
-{                      
-  switch (type) 
-  {
-    case WS_EVT_CONNECT:
-      //Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-      cameraClientId = client->id();
-      break;
-    case WS_EVT_DISCONNECT:
-      //Serial.printf("WebSocket client #%u disconnected\n", client->id());
-      cameraClientId = 0;
-      break;
-    case WS_EVT_DATA:
-      break;
-    case WS_EVT_PONG:
-    case WS_EVT_ERROR:
-      break;
-    default:
-      break;  
-  }
+void handleNotFound() {
+  server.send(404, "text/plain", "404: Not found");  // Send HTTP status 404 (Not Found) when there's no handler for the URI in the request
 }
 
-void setupCamera()
-{
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = Y2_GPIO_NUM;
-  config.pin_d1 = Y3_GPIO_NUM;
-  config.pin_d2 = Y4_GPIO_NUM;
-  config.pin_d3 = Y5_GPIO_NUM;
-  config.pin_d4 = Y6_GPIO_NUM;
-  config.pin_d5 = Y7_GPIO_NUM;
-  config.pin_d6 = Y8_GPIO_NUM;
-  config.pin_d7 = Y9_GPIO_NUM;
-  config.pin_xclk = XCLK_GPIO_NUM;
-  config.pin_pclk = PCLK_GPIO_NUM;
-  config.pin_vsync = VSYNC_GPIO_NUM;
-  config.pin_href = HREF_GPIO_NUM;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = PWDN_GPIO_NUM;
-  config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG;
-  
-  config.frame_size = FRAMESIZE_VGA;
-  config.jpeg_quality = 10;
-  config.fb_count = 1;
-
-  // camera init
-  esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) 
-  {
-    //Serial.printf("Camera init failed with error 0x%x", err);
-    return;
-  }  
-
-  if (psramFound())
-  {
-    heap_caps_malloc_extmem_enable(20000);  
-    //Serial.printf("PSRAM initialized. malloc to take memory from psram above this size");    
-  }  
+// function to move forward
+void Forward() {
+  analogWrite(in1, SPEED);
+  digitalWrite(in2, LOW);
+  analogWrite(in3, SPEED);
+  digitalWrite(in4, LOW);
 }
 
-void sendCameraPicture()
-{
-  if (cameraClientId == 0)
-  {
-    return;
-  }
-  unsigned long  startTime1 = millis();
-  //capture a frame
-  camera_fb_t * fb = esp_camera_fb_get();
-  if (!fb) 
-  {
-      //Serial.println("Frame buffer could not be acquired");
-      return;
-  }
-
-  unsigned long  startTime2 = millis();
-  wsCamera.binary(cameraClientId, fb->buf, fb->len);
-  esp_camera_fb_return(fb);
-    
-  //Wait for message to be delivered
-  while (true)
-  {
-    AsyncWebSocketClient * clientPointer = wsCamera.client(cameraClientId);
-    if (!clientPointer || !(clientPointer->queueIsFull()))
-    {
-      break;
-    }
-    delay(1);
-  }
-  
-  unsigned long  startTime3 = millis();  
-  //Serial.printf("Time taken Total: %d|%d|%d\n",startTime3 - startTime1, startTime2 - startTime1, startTime3-startTime2 );
+// function to move backward
+void Backward() {
+  digitalWrite(in1, LOW);
+  analogWrite(in2, SPEED);
+  digitalWrite(in3, LOW);
+  analogWrite(in4, SPEED);
 }
 
-void setUpPinModes()
-{
-  //Set up PWM
-  ledcSetup(PWMLightChannel, PWMFreq, PWMResolution);
-  pinMode(LIGHT_PIN, OUTPUT);    
-  ledcAttachPin(LIGHT_PIN, PWMLightChannel);
-
-  sendCarCommands("MoveCar,0"); 
-  sendCarCommands("Pan,90"); 
-  sendCarCommands("Tilt,90");  
+// function to turn right
+void TurnRight() {
+  digitalWrite(in1, LOW);
+  analogWrite(in2, SPEED);
+  analogWrite(in3, SPEED);
+  digitalWrite(in4, LOW);
 }
 
-void setup(void) 
-{
-  setUpPinModes();
-  Serial.begin(115200);
-
-  WiFi.softAP(ssid, password);
-  IPAddress IP = WiFi.softAPIP();
-  //Serial.print("AP IP address: ");
-  //Serial.println(IP);
-
-  server.on("/", HTTP_GET, handleRoot);
-  server.onNotFound(handleNotFound);
-      
-  wsCamera.onEvent(onCameraWebSocketEvent);
-  server.addHandler(&wsCamera);
-
-  wsCarInput.onEvent(onCarInputWebSocketEvent);
-  server.addHandler(&wsCarInput);
-
-  server.begin();
-  //Serial.println("HTTP server started");
-
-  setupCamera();
+// function to turn left
+void TurnLeft() {
+  analogWrite(in1, SPEED);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  analogWrite(in4, SPEED);
 }
 
+// function to move forward left
+void ForwardLeft() {
+  analogWrite(in1, SPEED);
+  digitalWrite(in2, LOW);
+  analogWrite(in3, SPEED / speed_Coeff);
+  digitalWrite(in4, LOW);
+}
 
-void loop() 
-{
-  wsCamera.cleanupClients(); 
-  wsCarInput.cleanupClients(); 
-  sendCameraPicture(); 
-  //Serial.printf("SPIRam Total heap %d, SPIRam Free Heap %d\n", ESP.getPsramSize(), ESP.getFreePsram());
+// function to move backward left
+void BackwardLeft() {
+  digitalWrite(in1, LOW);
+  analogWrite(in2, SPEED);
+  digitalWrite(in3, LOW);
+  analogWrite(in4, SPEED / speed_Coeff);
+}
+
+// function to move forward right
+void ForwardRight() {
+  analogWrite(in1, SPEED / speed_Coeff);
+  digitalWrite(in2, LOW);
+  analogWrite(in3, SPEED);
+  digitalWrite(in4, LOW);
+}
+
+// function to move backward right
+void BackwardRight() {
+  digitalWrite(in1, LOW);
+  analogWrite(in2, SPEED / speed_Coeff);
+  digitalWrite(in3, LOW);
+  analogWrite(in4, SPEED);
+}
+
+// function to stop motors
+void Stop() {
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, LOW);
+}
+
+// function to beep a buzzer
+void BeepHorn() {
+  digitalWrite(buzPin, HIGH);
+  delay(150);
+  digitalWrite(buzPin, LOW);
+  delay(80);
+}
+
+// function to turn on LED
+void TurnLightOn() {
+  digitalWrite(ledPin, HIGH);
+}
+
+// function to turn off LED
+void TurnLightOff() {
+  digitalWrite(ledPin, LOW);
 }
